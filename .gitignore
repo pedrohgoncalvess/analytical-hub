@@ -1,3 +1,5 @@
 .env
 s3/*
 .venv
+.idea
+__pycache__
