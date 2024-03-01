@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Boolean, func
+from sqlalchemy.orm import relationship
 from database.models.base import Base
+from database.models.file.schema import Schema
 
 
 class File(Base):
@@ -10,7 +12,9 @@ class File(Base):
     name = Column(String(150), unique=True, nullable=False)
     type = Column(String(10), nullable=False)
     size = Column(Numeric, nullable=False)
-    columns = Column(Integer, nullable=False)
-    rows = Column(Integer, nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    nb_columns = Column(Integer, nullable=False)
+    nb_rows = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=func.now())
     created_by = Column(Integer)
+    status = Column(Boolean, nullable=False, default=True)
+    file_schema_fk = relationship("Schema", backref="file.schema")
