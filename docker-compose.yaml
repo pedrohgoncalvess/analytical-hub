@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   db:
     image: postgres
@@ -8,6 +9,23 @@ services:
       - POSTGRES_PASSWORD=admin
     ports:
       - "5435:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - backend
+
+networks:
+  backend:
 
 volumes:
   pg_data:
