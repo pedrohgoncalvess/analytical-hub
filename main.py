@@ -4,6 +4,10 @@ import io
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from database.models.file.file import File as FileSchema
+from database.connection import DatabaseConnection
+from database.query.file.file import FileQuery
+from utils.local_exception import LocalException
 
 app = FastAPI()
 
@@ -20,43 +24,69 @@ app.add_middleware(
 
 @app.post("/upload/file")
 async def post_file(file: UploadFile = File(...), separator: str = ','):
-    try:
-        file_content = await file.read()
-        file_content_str = file_content.decode('utf-8')
+    fileContent = await file.read()
+    fileContentStr = fileContent.decode('utf-8')
+    fileName = file.filename.split(".")[0].lower().replace(" ", "_")
+    fileExtension = file.filename.split(".")[1].lower()
+    fileContentIo = io.StringIO(fileContentStr)
 
-        file_content_io = io.StringIO(file_content_str)
+    main = duckdb.read_csv(fileContentIo, sep=separator)
+    duckdb.sql(f"copy main to 's3/{file.filename}'")
 
-        main = duckdb.read_csv(file_content_io, sep=separator)
-        duckdb.sql(f"copy main to 's3/{file.filename.split('.')[0]}.parquet'")
+    path = "s3/"
+    files = os.listdir(path)
+    filesSizes = {file: f"{os.path.getsize(os.path.join(path, file)) / (1024 * 1024):.2f}" for file in files}
 
-        return status.HTTP_201_CREATED
-    except Exception as e:
-        print(f"Erro no servidor: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno no servidor")
+    rowsNumber = duckdb.sql("SELECT COUNT(*) FROM main").fetchdf().iloc[0, 0]
+    dfColumns = list(duckdb.sql("SELECT * FROM main limit 1").to_df().columns)
+    fileSize = filesSizes.get(file.filename)
+
+    dbConnection = DatabaseConnection()
+    newFile = FileSchema(name=fileName,
+                         type=fileExtension,
+                         size=float(fileSize),
+                         nb_columns=len(dfColumns),
+                         nb_rows=int(rowsNumber)
+                         )
+
+    schemaInfo = duckdb.sql(f"DESCRIBE TABLE main").to_df()
+
+    insertFileResult = dbConnection.addNewObject(newFile)
+    if isinstance(insertFileResult, LocalException):
+        raise HTTPException(insertFileResult.status_code, insertFileResult.error_message)
+
+    fileQuery = FileQuery()
+    fileId = fileQuery.getFileByName(fileName).id
+
+
+    schemaInfoList = []
+    for column in dfColumns:
+        rowOfDfSchema = schemaInfo[schemaInfo['column_name'] == column]
+        columnType = rowOfDfSchema['column_type'].iloc[0]
+        hvNull = True if rowOfDfSchema['null'].iloc[0] == 'YES' else False
+        hvDefault = rowOfDfSchema['default'].iloc[0]
+        schemaInfoList.append({"id_table": fileId, "column_name": column, "column_type": columnType, "null": hvNull,
+                               "default": hvDefault})
+        print(schemaInfoList)
+    schemaInsert = fileQuery.bulkInsertSchema(schemaInfoList)
+    if isinstance(schemaInsert, LocalException):
+        fileQuery.deleteFileByName(fileId)
+        raise HTTPException(schemaInsert.status_code, schemaInsert.error_message)
+
+    return status.HTTP_201_CREATED
 
 
 @app.get("/file/schema")
-async def get_schema(path: str):
-    if not path.endswith('.parquet'):
-        path += '.parquet'
-
-    path = "s3/"+path.replace('-','/')
-    df = duckdb.sql(f"select * from '{path}' limit 1").df()
-    schema = [{"name": column, "type": str(col_type)} for column, col_type in list(df.dtypes.items())]
-    return {"columns": schema}
-
+async def get_schema(id: int):
+    fileQuery = FileQuery()
+    return {"schema": fileQuery.getSchemaByIdFile(id)}
 
 
 @app.get("/file/list")
-async def get_file_list(path:str=""):
-    if path == "":
-        path = "s3/"
-    files = os.listdir(path)
+async def get_file_list():
+    fileQuerys = FileQuery()
 
-    newFiles = [file for file in files if os.path.isfile(os.path.join(path, file))]
-    filesSizes = [{"file":file,"size": f"{os.path.getsize(os.path.join(path, file)) / (1024 * 1024):.2f} mb"} for file in newFiles]
-
-    return {"files": filesSizes}
+    return {"files": fileQuerys.getAllFiles()}
 
 
 if __name__ == "__main__":
