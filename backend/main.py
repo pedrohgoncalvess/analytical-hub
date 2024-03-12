@@ -67,7 +67,6 @@ async def post_file(file: UploadFile = File(...), separator: str = ','):
         hvDefault = rowOfDfSchema['default'].iloc[0]
         schemaInfoList.append({"id_table": fileId, "column_name": column, "column_type": columnType, "null": hvNull,
                                "default": hvDefault})
-        print(schemaInfoList)
     schemaInsert = fileQuery.bulkInsertSchema(schemaInfoList)
     if isinstance(schemaInsert, LocalException):
         fileQuery.deleteFileByName(fileId)
