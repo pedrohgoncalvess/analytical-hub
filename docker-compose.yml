@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5435:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - analytical-hub
+
+  backend:
+    build:
+      context: backend/
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - analytical-hub
+
+networks:
+  analytical-hub:
+
+volumes:
+  pg_data:
