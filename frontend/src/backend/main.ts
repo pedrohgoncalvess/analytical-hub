@@ -1,2 +1,2 @@
-export const apiPath = "http://localhost:8000"
+export const apiPath = "http://restapi:8000"
 
