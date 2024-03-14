@@ -3,7 +3,7 @@
 	import FilesReport from '../components/home/FilesReport.svelte';
 	import { onMount } from 'svelte';
 	import type {Files} from '../backend/interfaces/files/files.js';
-	import { getAllFiles } from '../backend/requests/files/file.ts';
+	import { getAllFiles } from '../backend/requests/file/get.ts';
 
 	let files: Files
 
