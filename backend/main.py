@@ -22,15 +22,18 @@ app.add_middleware(
 )
 
 
-@app.post("/upload/file")
-async def post_file(file: UploadFile = File(...), separator: str = ','):
-    fileContent = await file.read()
-    fileContentStr = fileContent.decode('utf-8')
+@app.post("/file/upload")
+async def post_file(file: UploadFile = File(...), separator: str = ',', header: bool = True):
+    fileContent = file.file.read()
+    try:
+        fileContentStr = fileContent.decode('utf-8')
+    except UnicodeDecodeError:
+        fileContentStr = fileContent.decode('ISO-8859-1')
     fileName = file.filename.split(".")[0].lower().replace(" ", "_")
     fileExtension = file.filename.split(".")[1].lower()
     fileContentIo = io.StringIO(fileContentStr)
 
-    main = duckdb.read_csv(fileContentIo, sep=separator)
+    main = duckdb.read_csv(fileContentIo, sep=separator, header=header)
     duckdb.sql(f"copy main to 's3/{file.filename}'")
 
     path = "s3/"
@@ -80,6 +83,17 @@ async def get_schema(id: int):
     fileQuery = FileQuery()
     return {"schema": fileQuery.getSchemaByIdFile(id)}
 
+
+@app.post("/file/preview")
+async def file_preview(file: UploadFile = File(...), separator: str = ',', header: bool = True):
+    fileContent = await file.read()
+    fileContentStr = fileContent.decode('utf-8')
+    fileContentIo = io.StringIO(fileContentStr)
+
+    main = duckdb.read_csv(fileContentIo, sep=separator, header=header)
+    view = duckdb.sql("select * from main limit 5").to_df().to_dict(orient='records')
+
+    return view
 
 @app.get("/file/list")
 async def get_file_list():
