@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  db:
+  database:
     image: postgres
     restart: always
     environment:
@@ -14,13 +14,23 @@ services:
     networks:
       - analytical-hub
 
-  backend:
+  restapi:
     build:
       context: backend/
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      - database
+    networks:
+      - analytical-hub
+
+  webui:
+    build:
+      context: frontend/
+    ports:
+      - "5000:5000"
+    depends_on:
+      - restapi
     networks:
       - analytical-hub
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Files, TableSchema } from '../../backend/interfaces/files/files.ts';
-	import { getSchema } from '../../backend/requests/files/file.ts';
+	import { getSchema } from '../../backend/requests/file/get.ts';
 	import FileSchema from './FileSchema.svelte';
 	import InputFile from './InputFile.svelte';
 	export let listOfFiles: Files | null
@@ -37,9 +37,9 @@
 {/if}
 <div class="metadata-container">
 	<div class="header-metadata-container">
-		<h1 class="title-header">Gerenciamento de arquivos.</h1>
+		<h1 class="title-header">File management.</h1>
 		<div aria-hidden="true" on:click={openFileInputPop} class="add-file-container">
-			<p class="label-add-file">Adicionar arquivo</p>
+			<p class="label-add-file">Add file</p>
 			<i class="fa-solid fa-plus add-file"></i>
 		</div>
 	</div>
@@ -84,8 +84,10 @@
 <style>
 	.metadata-container {
 			width: 50%;
-			margin: 5% auto 15% 15%;
-			height: 100%;
+			margin: 5% auto 5% 15%;
+			max-height: 80vh;
+			overflow-y: auto;
+			height: auto;
 			border-radius: 10px;
       box-shadow: 5px 15px 25px rgba(17, 17, 17, 0.2);
 			background-color: #fdfdfd;
@@ -103,6 +105,7 @@
 
 	.add-file-container {
 			display: flex;
+			justify-content: right;
 			background-color: #0d45a5;
 			width: 20%;
 			border-radius: 10px;
@@ -110,10 +113,15 @@
 			margin: 3%;
 			color: white;
 			cursor: pointer;
+			padding: 10px 0;
 	}
 
 	.add-file {
 			font-size: 30px;
+			margin: auto 5% auto 5%;
+	}
+
+	.label-add-file {
 			margin: auto;
 	}
 
