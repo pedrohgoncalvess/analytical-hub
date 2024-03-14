@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Files, TableSchema } from '../../backend/interfaces/files/files.ts';
 	import GraphArea from './GraphArea.svelte';
-	import { getSchema } from '../../backend/requests/files/file.ts';
+	import { getSchema } from '../../backend/requests/file/get.ts';
 	import Charts from './Charts.svelte';
 	export let files: Files | null = null
 	let selectedFile: number | null = null
